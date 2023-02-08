@@ -1,8 +1,8 @@
 #include <stdlib.h>
 
+#include "debug.h"
 #include "fliki.h"
 #include "global.h"
-#include "debug.h"
 
 /**
  * @brief Validates command line arguments passed to the program.
@@ -23,6 +23,51 @@
  */
 
 int validargs(int argc, char **argv) {
-    // TO BE IMPLEMENTED.
-    abort();
+    // Checks if there is more to the command line
+    if (argc < 2) {
+        return -1;
+    }
+    global_options = 0;
+
+    // i starts at 1 because we want to read past the program name
+    for (int i = 1; i < argc; i++) {
+        // Getting the updated argv and first char of that argv
+        char *arg = *(argv + i);
+        char firstchar = *arg;
+        // The if cases for when char starts with "-"
+        if (firstchar == '-') {
+            // Getting the second char of that argv
+            char secondchar = *(arg + 1);
+            if (secondchar == 'h') {
+                if (i == 1) {
+                    global_options = global_options | HELP_OPTION;
+                    return 0;
+                } else {
+                    global_options = 0;
+                    return -1;
+                }
+            }
+            else if (secondchar == 'n') {
+                global_options = global_options | NO_PATCH_OPTION;
+            }
+            else if (secondchar == 'q') {
+                global_options = global_options | QUIET_OPTION;
+            } 
+            else {
+                global_options = 0;
+                return -1;
+            }
+        }
+        // If the file name is not the last time in the command line then it will return -1 otherwise it will save the file name
+        else if (i == (argc - 1)) {
+            char *last = *(argv + (argc - 1));
+            diff_filename = last;
+            return 0;
+        } else {
+            global_options = 0;
+            return -1;
+        }
+    }
+    global_options = 0;
+    return -1;
 }
