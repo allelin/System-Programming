@@ -34,10 +34,17 @@ int validargs(int argc, char **argv) {
         // Getting the updated argv and first char of that argv
         char *arg = *(argv + i);
         char firstchar = *arg;
+
         // The if cases for when char starts with "-"
         if (firstchar == '-') {
             // Getting the second char of that argv
             char secondchar = *(arg + 1);
+            char thirdchar = *(arg + 2);
+            if (thirdchar != 0) {
+                global_options = 0;
+                return -1;
+            }
+
             if (secondchar == 'h') {
                 if (i == 1) {
                     global_options = global_options | HELP_OPTION;
