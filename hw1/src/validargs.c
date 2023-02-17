@@ -69,7 +69,12 @@ int validargs(int argc, char **argv) {
         else if (i == (argc - 1)) {
             char *last = *(argv + (argc - 1));
             diff_filename = last;
-            return 0;
+            if (diff_filename != NULL) {
+                return 0;
+            } else {
+                global_options = 0;
+                return -1;
+            }
         } else {
             global_options = 0;
             return -1;
