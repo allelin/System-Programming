@@ -639,14 +639,13 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 read = fgetc(in);
                 if (read == ' ') {
                     add_count++;
-                    // printf("add_count: %d)", add_count);
                     read = fgetc(in);
                     hunk_line = 1;
                     char_counter = 0;
                     *letter = read;
                     char_counter++;
                     if (add_count > hp->new_end - hp->new_start + 1) {
-                        // printf("TOO MANY LINES");
+                        // fprintf("TOO MANY LINES");
                         unsigned char second_byte = (char_counter >> 8);
                         unsigned char first_byte = char_counter & 0xff;
                         *pointer = (char)first_byte;
@@ -1069,7 +1068,6 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 return EOS;
             }
             if (part2 == 1) {
-                ////printf("first %c", hunk_additions_buffer[2]);
                 *letter = read;
                 letter++;
                 char_counter++;
@@ -1078,7 +1076,6 @@ int hunk_getc(HUNK *hp, FILE *in) {
         } else {
             hunk_line = 0;
             add_count = 0;
-            // printf("????\n");
             return ERR;
         }
     }
@@ -1393,6 +1390,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
         if (hp.type == HUNK_APPEND_TYPE) {
             if (hp.old_start > hp.new_start) {
                 if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                    fprintf(stderr, "ERROR: HUNK APPEND TYPE: OLD START IS GREATER THAN NEW START");
                     hunk_show(&hp, stderr);
                 }
                 // printf("ERROR: HUNK APPEND TYPE: OLD START IS GREATER THAN NEW START AND LESS THAN NEW END\n");
@@ -1408,6 +1406,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                     if (b == EOF) {
                         // printf("ERROR: HUNK APPEND TYPE: B IS EOF\n");
                         if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                            fprintf(stderr, "ERROR: HUNK APPEND TYPE: IS READING EOF\n");
                             hunk_show(&hp, stderr);
                         }
                         return -1;
@@ -1429,6 +1428,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                     if (c == ERR) {
                         // printf("ERROR: HUNK APPEND TYPE: C IS ERR\n");
                         if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                            fprintf(stderr, "ERROR: HUNK APPEND TYPE: IS READING ERR\n");
                             hunk_show(&hp, stderr);
                         }
                         return -1;
@@ -1445,6 +1445,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 // printf("ERROR: HUNK APPEND TYPE: NEW START IS NOT EQUAL TO LINE IN\n");
                 // printf("HERE OR SOMETHING\n");
                 if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                    fprintf(stderr, "ERROR: HUNK APPEND TYPE: NEW START IS NOT EQUAL\n");
                     hunk_show(&hp, stderr);
                 }
                 return -1;
@@ -1469,6 +1470,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 if (c == ERR) {
                     // printf("ERROR: HUNK DELETE TYPE: C IS ERR\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                        fprintf(stderr, "ERROR: HUNK DELETE TYPE: IS READING ERR\n");
                         hunk_show(&hp, stderr);
                     }
                     return -1;
@@ -1476,6 +1478,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 if (b != c) {
                     // printf("ERROR: HUNK DELETE TYPE: B IS NOT EQUAL TO C\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                        fprintf(stderr, "ERROR: HUNK DELETE TYPE: IS NOT EQUAL\n");
                         hunk_show(&hp, stderr);
                     }
                     return -1;
@@ -1505,6 +1508,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 if (c == ERR) {
                     // printf("ERROR: HUNK DELETE TYPE: C IS ERR\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                        fprintf(stderr, "ERROR: HUNK DELETE TYPE: IS READING ERR\n");
                         hunk_show(&hp, stderr);
                     }
                     return -1;
@@ -1512,6 +1516,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 if (b != c) {
                     // printf("ERROR: HUNK DELETE TYPE: B IS NOT EQUAL TO C\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                        fprintf(stderr, "ERROR: HUNK DELETE TYPE: IS NOT EQUAL");
                         hunk_show(&hp, stderr);
                     }
                     return -1;
@@ -1527,6 +1532,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 if (c == ERR) {
                     // printf("ERROR: HUNK APPEND TYPE: C IS ERR\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                        fprintf(stderr, "ERROR: HUNK APPEND TYPE: IS READING ERR\n");
                         hunk_show(&hp, stderr);
                     }
                     return -1;
