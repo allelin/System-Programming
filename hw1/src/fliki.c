@@ -620,27 +620,33 @@ int hunk_getc(HUNK *hp, FILE *in) {
         eos_jump = 0;
         goto eos_jump_label;
     }
+    *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+    *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+    *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+    *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
     int read = fgetc(in);
     if (hp->type == HUNK_APPEND_TYPE) {
         if (read == '\n') {
             // If it is done with the first line of the body then it adds to the buffer with the correct format
             if (hunk_line == 1) {
-                char_counter++;
-                unsigned char second_byte = (char_counter >> 8);
-                unsigned char first_byte = char_counter & 0xff;
-                *pointer = (char)first_byte;
-                pointer++;
-                *pointer = (char)second_byte;
-                *letter = read;
-                letter++;
-                pointer = letter;
-                letter = letter + 2;
+                if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3)) {
+                    // TRUE and TRUE -> FALSE
+                    // TRUE and FALSE -> FALSE
+                    // FALSE and TRUE -> FALSE
+                    // FALSE and FALSE -> TRUE
+                    char_counter++;
+                    unsigned char second_byte = (char_counter >> 8);
+                    unsigned char first_byte = char_counter & 0xff;
+                    *pointer = (char)first_byte;
+                    pointer++;
+                    *pointer = (char)second_byte;
+                    *letter = read;
+                    letter++;
+                    pointer = letter;
+                    letter = letter + 2;
+                }
                 hunk_line = 0;
                 ungetc(read, in);
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
             hunk_line = 0;
@@ -651,47 +657,47 @@ int hunk_getc(HUNK *hp, FILE *in) {
                     add_count++;
                     read = fgetc(in);
                     if (read == '\n') {
-                        char_counter++;
-                        unsigned char second_byte = (char_counter >> 8);
-                        unsigned char first_byte = char_counter & 0xff;
-                        *pointer = (char)first_byte;
-                        pointer++;
-                        *pointer = (char)second_byte;
-                        *letter = read;
-                        letter++;
-                        pointer = letter;
-                        letter = letter + 2;
+                        if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                            char_counter++;
+                            unsigned char second_byte = (char_counter >> 8);
+                            unsigned char first_byte = char_counter & 0xff;
+                            *pointer = (char)first_byte;
+                            pointer++;
+                            *pointer = (char)second_byte;
+                            *letter = read;
+                            letter++;
+                            pointer = letter;
+                            letter = letter + 2;
+                        }
                         hunk_line = 0;
                         ungetc(read, in);
                         return read;
                     }
                     hunk_line = 1;
-                    char_counter = 0;
-                    *letter = read;
-                    char_counter++;
+                    if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                        char_counter = 0;
+                        *letter = read;
+                        char_counter++;
+                    }
                     if (add_count > hp->new_end - hp->new_start + 1) {
                         // fprintf("TOO MANY LINES");
-                        unsigned char second_byte = (char_counter >> 8);
-                        unsigned char first_byte = char_counter & 0xff;
-                        *pointer = (char)first_byte;
-                        pointer++;
-                        *pointer = (char)second_byte;
-                        *letter = read;
-                        letter++;
-                        pointer = letter;
-                        letter = letter + 2;
+                        if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                            unsigned char second_byte = (char_counter >> 8);
+                            unsigned char first_byte = char_counter & 0xff;
+                            *pointer = (char)first_byte;
+                            pointer++;
+                            *pointer = (char)second_byte;
+                            *letter = read;
+                            letter++;
+                            pointer = letter;
+                            letter = letter + 2;
+                        }
                         hunk_line = 0;
-                        *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                        *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                        *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                        *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                         return ERR;
                     }
-                    letter++;
-                    *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                    *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                    *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                    *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+                    if (!(pointer > hunk_additions_buffer + HUNK_MAX - 2)) {
+                        letter++;
+                    }
                     return read;
                 } else {
                     // printf("when it is not > ");
@@ -739,33 +745,28 @@ int hunk_getc(HUNK *hp, FILE *in) {
                     // printf("ran into eof while reading line\n");
                     return ERR;
                 }
-                char_counter++;
-                unsigned char second_byte = (char_counter >> 8);
-                unsigned char first_byte = char_counter & 0xff;
-                *pointer = (char)first_byte;
-                pointer++;
-                *pointer = (char)second_byte;
-                *letter = '\n';
-                letter++;
-                *letter = 0x0;
-                letter++;
-                *letter = 0x0;
+                if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                    char_counter++;
+                    unsigned char second_byte = (char_counter >> 8);
+                    unsigned char first_byte = char_counter & 0xff;
+                    *pointer = (char)first_byte;
+                    pointer++;
+                    *pointer = (char)second_byte;
+                    *letter = '\n';
+                    letter++;
+                    *letter = 0x0;
+                    letter++;
+                    *letter = 0x0;
+                }
                 add_count = 0;
                 hunk_line = 0;
-                // printf("1\n");
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return EOS;
             }
-            *letter = read;
-            letter++;
-            char_counter++;
-            *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-            *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-            *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-            *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+            if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                *letter = read;
+                letter++;
+                char_counter++;
+            }
             return read;
         } else {
             hunk_line = 0;
@@ -778,22 +779,20 @@ int hunk_getc(HUNK *hp, FILE *in) {
         if (read == '\n') {
             // If it is done with the first line of the body then it adds to the buffer with the correct format
             if (hunk_line == 1) {
-                char_counter++;
-                unsigned char second_byte = (char_counter >> 8);
-                unsigned char first_byte = char_counter & 0xff;
-                *pointer2 = (char)first_byte;
-                pointer2++;
-                *pointer2 = (char)second_byte;
-                *letter2 = read;
-                letter2++;
-                pointer2 = letter2;
-                letter2 = letter2 + 2;
+                if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3)) {
+                    char_counter++;
+                    unsigned char second_byte = (char_counter >> 8);
+                    unsigned char first_byte = char_counter & 0xff;
+                    *pointer2 = (char)first_byte;
+                    pointer2++;
+                    *pointer2 = (char)second_byte;
+                    *letter2 = read;
+                    letter2++;
+                    pointer2 = letter2;
+                    letter2 = letter2 + 2;
+                }
                 hunk_line = 0;
                 ungetc(read, in);
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
             hunk_line = 0;
@@ -804,48 +803,48 @@ int hunk_getc(HUNK *hp, FILE *in) {
                     del_count++;
                     read = fgetc(in);
                     if (read == '\n') {
-                        char_counter++;
-                        unsigned char second_byte = (char_counter >> 8);
-                        unsigned char first_byte = char_counter & 0xff;
-                        *pointer2 = (char)first_byte;
-                        pointer2++;
-                        *pointer2 = (char)second_byte;
-                        *letter2 = read;
-                        letter2++;
-                        pointer2 = letter2;
-                        letter2 = letter2 + 2;
+                        if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                            char_counter++;
+                            unsigned char second_byte = (char_counter >> 8);
+                            unsigned char first_byte = char_counter & 0xff;
+                            *pointer2 = (char)first_byte;
+                            pointer2++;
+                            *pointer2 = (char)second_byte;
+                            *letter2 = read;
+                            letter2++;
+                            pointer2 = letter2;
+                            letter2 = letter2 + 2;
+                        }
                         hunk_line = 0;
                         ungetc(read, in);
                         return read;
                     }
                     hunk_line = 1;
-                    char_counter = 0;
-                    *letter2 = read;
-                    char_counter++;
+                    if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                        char_counter = 0;
+                        *letter2 = read;
+                        char_counter++;
+                    }
                     if (del_count > hp->old_end - hp->old_start + 1) {
                         // printf("del_count: %d", del_count);
                         // printf("TOO MANY LINES");
-                        unsigned char second_byte = (char_counter >> 8);
-                        unsigned char first_byte = char_counter & 0xff;
-                        *pointer2 = (char)first_byte;
-                        pointer2++;
-                        *pointer2 = (char)second_byte;
-                        *letter2 = read;
-                        letter2++;
-                        pointer2 = letter2;
-                        letter2 = letter2 + 2;
+                        if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                            unsigned char second_byte = (char_counter >> 8);
+                            unsigned char first_byte = char_counter & 0xff;
+                            *pointer2 = (char)first_byte;
+                            pointer2++;
+                            *pointer2 = (char)second_byte;
+                            *letter2 = read;
+                            letter2++;
+                            pointer2 = letter2;
+                            letter2 = letter2 + 2;
+                        }
                         hunk_line = 0;
-                        *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                        *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                        *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                        *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                         return ERR;
                     }
-                    letter2++;
-                    *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                    *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                    *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                    *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+                    if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                        letter2++;
+                    }
                     return read;
                 } else {
                     // printf("when it is not < ");
@@ -896,33 +895,29 @@ int hunk_getc(HUNK *hp, FILE *in) {
                     // printf("ran into eof while reading line\n");
                     return ERR;
                 }
-                char_counter++;
-                unsigned char second_byte = (char_counter >> 8);
-                unsigned char first_byte = char_counter & 0xff;
-                *pointer2 = (char)first_byte;
-                pointer2++;
-                *pointer2 = (char)second_byte;
-                *letter2 = '\n';
-                letter2++;
-                *letter2 = 0x0;
-                letter2++;
-                *letter2 = 0x0;
+                if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                    char_counter++;
+                    unsigned char second_byte = (char_counter >> 8);
+                    unsigned char first_byte = char_counter & 0xff;
+                    *pointer2 = (char)first_byte;
+                    pointer2++;
+                    *pointer2 = (char)second_byte;
+                    *letter2 = '\n';
+                    letter2++;
+                    *letter2 = 0x0;
+                    letter2++;
+                    *letter2 = 0x0;
+                }
                 add_count = 0;
                 hunk_line = 0;
                 // printf("1\n");
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return EOS;
             }
-            *letter2 = read;
-            letter2++;
-            char_counter++;
-            *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-            *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-            *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-            *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+            if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                *letter2 = read;
+                letter2++;
+                char_counter++;
+            }
             return read;
         } else {
             hunk_line = 0;
@@ -934,41 +929,37 @@ int hunk_getc(HUNK *hp, FILE *in) {
     if (hp->type == HUNK_CHANGE_TYPE) {
         if (read == '\n') {
             if (hunk_line == 1 && part1 == 1 && part2 == 0) {
-                char_counter++;
-                unsigned char second_byte = (char_counter >> 8);
-                unsigned char first_byte = char_counter & 0xff;
-                *pointer2 = (char)first_byte;
-                pointer2++;
-                *pointer2 = (char)second_byte;
-                *letter2 = read;
-                letter2++;
-                pointer2 = letter2;
-                letter2 = letter2 + 2;
+                if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3)) {
+                    char_counter++;
+                    unsigned char second_byte = (char_counter >> 8);
+                    unsigned char first_byte = char_counter & 0xff;
+                    *pointer2 = (char)first_byte;
+                    pointer2++;
+                    *pointer2 = (char)second_byte;
+                    *letter2 = read;
+                    letter2++;
+                    pointer2 = letter2;
+                    letter2 = letter2 + 2;
+                }
                 hunk_line = 0;
                 ungetc(read, in);
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
             if (hunk_line == 1 && part1 == 1 && part2 == 1) {
-                char_counter++;
-                unsigned char second_byte = (char_counter >> 8);
-                unsigned char first_byte = char_counter & 0xff;
-                *pointer = (char)first_byte;
-                pointer++;
-                *pointer = (char)second_byte;
-                *letter = read;
-                letter++;
-                pointer = letter;
-                letter = letter + 2;
+                if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3)) {
+                    char_counter++;
+                    unsigned char second_byte = (char_counter >> 8);
+                    unsigned char first_byte = char_counter & 0xff;
+                    *pointer = (char)first_byte;
+                    pointer++;
+                    *pointer = (char)second_byte;
+                    *letter = read;
+                    letter++;
+                    pointer = letter;
+                    letter = letter + 2;
+                }
                 hunk_line = 0;
                 ungetc(read, in);
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
             hunk_line = 0;
@@ -1012,48 +1003,48 @@ int hunk_getc(HUNK *hp, FILE *in) {
                     del_count++;
                     read = fgetc(in);
                     if (read == '\n' && part2 == 0) {
-                        char_counter++;
-                        unsigned char second_byte = (char_counter >> 8);
-                        unsigned char first_byte = char_counter & 0xff;
-                        *pointer2 = (char)first_byte;
-                        pointer2++;
-                        *pointer2 = (char)second_byte;
-                        *letter2 = read;
-                        letter2++;
-                        pointer2 = letter2;
-                        letter2 = letter2 + 2;
+                        if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                            char_counter++;
+                            unsigned char second_byte = (char_counter >> 8);
+                            unsigned char first_byte = char_counter & 0xff;
+                            *pointer2 = (char)first_byte;
+                            pointer2++;
+                            *pointer2 = (char)second_byte;
+                            *letter2 = read;
+                            letter2++;
+                            pointer2 = letter2;
+                            letter2 = letter2 + 2;
+                        }
                         hunk_line = 0;
                         ungetc(read, in);
                         return read;
                     }
                     hunk_line = 1;
-                    char_counter = 0;
-                    *letter2 = read;
-                    char_counter++;
+                    if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                        char_counter = 0;
+                        *letter2 = read;
+                        char_counter++;
+                    }
                     if (del_count > hp->old_end - hp->old_start + 1) {
                         // printf("TOO MANY LINES");
-                        unsigned char second_byte = (char_counter >> 8);
-                        unsigned char first_byte = char_counter & 0xff;
-                        *pointer2 = (char)first_byte;
-                        pointer2++;
-                        *pointer2 = (char)second_byte;
-                        *letter2 = read;
-                        letter2++;
-                        pointer2 = letter2;
-                        letter2 = letter2 + 2;
+                        if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                            unsigned char second_byte = (char_counter >> 8);
+                            unsigned char first_byte = char_counter & 0xff;
+                            *pointer2 = (char)first_byte;
+                            pointer2++;
+                            *pointer2 = (char)second_byte;
+                            *letter2 = read;
+                            letter2++;
+                            pointer2 = letter2;
+                            letter2 = letter2 + 2;
+                        }
                         hunk_line = 0;
-                        *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                        *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                        *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                        *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                         return ERR;
                     }
                     part1 = 1;
-                    letter2++;
-                    *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                    *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                    *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                    *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+                    if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                        letter2++;
+                    }
                     return read;
                 } else {
                     // printf("when it is not < ");
@@ -1066,49 +1057,49 @@ int hunk_getc(HUNK *hp, FILE *in) {
                     add_count++;
                     read = fgetc(in);
                     if (read == '\n' && part1 == 1 && part2 == 1) {
-                        char_counter++;
-                        unsigned char second_byte = (char_counter >> 8);
-                        unsigned char first_byte = char_counter & 0xff;
-                        *pointer = (char)first_byte;
-                        pointer++;
-                        *pointer = (char)second_byte;
-                        *letter = read;
-                        letter++;
-                        pointer = letter;
-                        letter = letter + 2;
+                        if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                            char_counter++;
+                            unsigned char second_byte = (char_counter >> 8);
+                            unsigned char first_byte = char_counter & 0xff;
+                            *pointer = (char)first_byte;
+                            pointer++;
+                            *pointer = (char)second_byte;
+                            *letter = read;
+                            letter++;
+                            pointer = letter;
+                            letter = letter + 2;
+                        }
                         hunk_line = 0;
                         ungetc(read, in);
                         return read;
                     }
                     hunk_line = 1;
-                    char_counter = 0;
                     // printf("letter %c", *letter);
-                    *letter = read;
-                    // printf("letter %c", *letter);
-                    char_counter++;
+                    if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                        char_counter = 0;
+                        *letter = read;
+                        // printf("letter %c", *letter);
+                        char_counter++;
+                    }
                     if (add_count > hp->new_end - hp->new_start + 1) {
                         // printf("TOO MANY LINES");
-                        unsigned char second_byte = (char_counter >> 8);
-                        unsigned char first_byte = char_counter & 0xff;
-                        *pointer = (char)first_byte;
-                        pointer++;
-                        *pointer = (char)second_byte;
-                        *letter = read;
-                        letter++;
-                        pointer = letter;
-                        letter = letter + 2;
+                        if (!(pointer2 > hunk_additions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                            unsigned char second_byte = (char_counter >> 8);
+                            unsigned char first_byte = char_counter & 0xff;
+                            *pointer = (char)first_byte;
+                            pointer++;
+                            *pointer = (char)second_byte;
+                            *letter = read;
+                            letter++;
+                            pointer = letter;
+                            letter = letter + 2;
+                        }
                         hunk_line = 0;
-                        *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                        *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                        *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                        *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                         return ERR;
                     }
-                    letter++;
-                    *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                    *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                    *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                    *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+                    if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                        letter++;
+                    }
                     return read;
                 } else {
                     // printf("when it is not > ");
@@ -1154,34 +1145,30 @@ int hunk_getc(HUNK *hp, FILE *in) {
                     // printf("ran into eof while reading line WHILE READING DEL\n");
                     return ERR;
                 }
-                char_counter++;
-                unsigned char second_byte = (char_counter >> 8);
-                unsigned char first_byte = char_counter & 0xff;
-                *pointer2 = (char)first_byte;
-                pointer2++;
-                *pointer2 = (char)second_byte;
-                *letter2 = '\n';
-                letter2++;
-                *letter2 = 0x0;
-                letter2++;
-                *letter2 = 0x0;
+                if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                    char_counter++;
+                    unsigned char second_byte = (char_counter >> 8);
+                    unsigned char first_byte = char_counter & 0xff;
+                    *pointer2 = (char)first_byte;
+                    pointer2++;
+                    *pointer2 = (char)second_byte;
+                    *letter2 = '\n';
+                    letter2++;
+                    *letter2 = 0x0;
+                    letter2++;
+                    *letter2 = 0x0;
+                }
                 add_count = 0;
                 hunk_line = 0;
                 // printf("wasdwa\n");
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return EOS;
             }
             if (part1 == 1 && part2 == 0) {
-                *letter2 = read;
-                letter2++;
-                char_counter++;
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+                if (!(pointer2 > hunk_deletions_buffer + HUNK_MAX - 3 || letter2 > hunk_deletions_buffer + HUNK_MAX - 2)) {
+                    *letter2 = read;
+                    letter2++;
+                    char_counter++;
+                }
                 return read;
             }
 
@@ -1192,34 +1179,30 @@ int hunk_getc(HUNK *hp, FILE *in) {
                     // printf("ran into eof while reading line WHILE READING ADD\n");
                     return ERR;
                 }
-                char_counter++;
-                unsigned char second_byte = (char_counter >> 8);
-                unsigned char first_byte = char_counter & 0xff;
-                *pointer = (char)first_byte;
-                pointer++;
-                *pointer = (char)second_byte;
-                *letter = '\n';
-                letter++;
-                *letter = 0x0;
-                letter++;
-                *letter = 0x0;
+                if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                    char_counter++;
+                    unsigned char second_byte = (char_counter >> 8);
+                    unsigned char first_byte = char_counter & 0xff;
+                    *pointer = (char)first_byte;
+                    pointer++;
+                    *pointer = (char)second_byte;
+                    *letter = '\n';
+                    letter++;
+                    *letter = 0x0;
+                    letter++;
+                    *letter = 0x0;
+                }
                 add_count = 0;
                 hunk_line = 0;
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 // printf("are we reading from this?\n");
                 return EOS;
             }
             if (part2 == 1) {
-                *letter = read;
-                letter++;
-                char_counter++;
-                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
-                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+                if (!(pointer > hunk_additions_buffer + HUNK_MAX - 3 || letter > hunk_additions_buffer + HUNK_MAX - 2)) {
+                    *letter = read;
+                    letter++;
+                    char_counter++;
+                }
                 return read;
             }
         } else {
@@ -1516,7 +1499,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
     while ((a = hunk_next(&hp, diff)) == 0) {
         c = hunk_getc(&hp, diff);
         if (hp.type == HUNK_APPEND_TYPE) {
-            //fprintf(stderr, "Append Header (before): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+            // fprintf(stderr, "Append Header (before): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
             /*if (hp.old_start > hp.new_start) {
                 fprintf(stderr, "Old start: %i, New start: %i", hp.old_start, hp.new_start);
                 if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
@@ -1526,33 +1509,27 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 // printf("ERROR: HUNK APPEND TYPE: OLD START IS GREATER THAN NEW START AND LESS THAN NEW END\n");
                 return -1;
             }*/
-            b = fgetc(in);
-            if (line_tracker <= hp.old_start) {
-                while (line_tracker <= hp.old_start) {
-                    if ((global_options & NO_PATCH_OPTION) != NO_PATCH_OPTION) {
-                        fputc(b, out);
-                    }
-                    b = fgetc(in);
-                    if (b == EOF) {
-                        // printf("ERROR: HUNK APPEND TYPE: B IS EOF\n");
-                        if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
-                            fprintf(stderr, "ERROR: HUNK APPEND TYPE: IS READING EOF\n");
-                            hunk_show(&hp, stderr);
-                        }
-                        return -1;
-                    }
-                    ////printf("B: %c\n", b);
-                    if (b == '\n') {
-                        line_tracker++;
-                        line_tracker2++;
-                    }
-                    ////printf("LINE TRACKER: %d\n\n\n", line_tracker);
-                }
+            while (line_tracker <= hp.old_start) {
+                b = fgetc(in);
                 if ((global_options & NO_PATCH_OPTION) != NO_PATCH_OPTION) {
-                    fputc('\n', out);
+                    fputc(b, out);
                 }
-                //line_tracker++;
+                if (b == EOF) {
+                    // printf("ERROR: HUNK APPEND TYPE: B IS EOF\n");
+                    if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                        fprintf(stderr, "ERROR: HUNK APPEND TYPE: IS READING EOF\n");
+                        hunk_show(&hp, stderr);
+                    }
+                    return -1;
+                }
+                ////printf("B: %c\n", b);
+                if (b == '\n') {
+                    line_tracker++;
+                    line_tracker2++;
+                }
+                ////printf("LINE TRACKER: %d\n\n\n", line_tracker);
             }
+            // line_tracker++;
             if ((hp.new_start) == line_tracker2) {
                 while ((c) != EOS) {
                     if (c == ERR) {
@@ -1575,16 +1552,16 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 // printf("ERROR: HUNK APPEND TYPE: NEW START IS NOT EQUAL TO LINE IN\n");
                 // printf("HERE OR SOMETHING\n");
                 if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
-                    //fprintf(stderr, "new_start: %d, line_tracker2: %d", hp.new_start, line_tracker2);
+                    // fprintf(stderr, "new_start: %d, line_tracker2: %d", hp.new_start, line_tracker2);
                     fprintf(stderr, "ERROR: HUNK APPEND TYPE: NEW START IS NOT EQUAL\n");
                     hunk_show(&hp, stderr);
                 }
                 return -1;
             }
-            //fprintf(stderr, "Append Header (after): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+            // fprintf(stderr, "Append Header (after): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
         }
         if (hp.type == HUNK_DELETE_TYPE) {
-            //fprintf(stderr, "Delete Header (before): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+            // fprintf(stderr, "Delete Header (before): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
             ////printf("line tracker: %d\n\n\n\n", line_tracker);
             while (line_tracker < hp.old_start) {
                 b = fgetc(in);
@@ -1621,11 +1598,11 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 }
                 c = hunk_getc(&hp, diff);
             }
-            //fprintf(stderr, "Delete Header (after): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+            // fprintf(stderr, "Delete Header (after): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
         }
         if (hp.type == HUNK_CHANGE_TYPE) {
-            //fprintf(stderr, "Change Header (before): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
-            while (line_tracker < hp.old_start - 1) {
+            // fprintf(stderr, "Change Header (before): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+            while (line_tracker < hp.old_start) {
                 b = fgetc(in);
                 if ((global_options & NO_PATCH_OPTION) != NO_PATCH_OPTION) {
                     fputc(b, out);
@@ -1643,17 +1620,17 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 if (c == ERR) {
                     // printf("ERROR: HUNK DELETE TYPE: C IS ERR\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
-                        fprintf(stderr, "ERROR: HUNK DELETE TYPE: IS READING ERR\n");
+                        fprintf(stderr, "ERROR: HUNK CHANGE_DELETE TYPE: IS READING ERR\n");
                         hunk_show(&hp, stderr);
                     }
                     return -1;
                 }
-                //fprintf(stderr, "Change Header (During): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
-                //fprintf(stderr, "b: %c, c: %c \n", b, c);
+                // fprintf(stderr, "Change Header (During): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+                // fprintf(stderr, "b: %c, c: %c \n", b, c);
                 if (b != c) {
                     // printf("ERROR: HUNK DELETE TYPE: B IS NOT EQUAL TO C\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
-                        fprintf(stderr, "ERROR: HUNK DELETE TYPE: IS NOT EQUAL");
+                        fprintf(stderr, "ERROR: HUNK CHANGE_DELETE TYPE: IS NOT EQUAL\n");
                         hunk_show(&hp, stderr);
                     }
                     return -1;
@@ -1665,13 +1642,12 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 (c = hunk_getc(&hp, diff));
             }
             c = hunk_getc(&hp, diff);
-            //fprintf(stderr, "LINE DEL: %c", c);
+            // fprintf(stderr, "LINE DEL: %c", c);
             while ((c) != EOS) {
-                //fprintf(stderr, "!");
                 if (c == ERR) {
                     // printf("ERROR: HUNK APPEND TYPE: C IS ERR\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
-                        //fprintf(stderr, "ERROR: HUNK APPEND TYPE: IS READING ERR\n");
+                        // fprintf(stderr, "ERROR: HUNK APPEND TYPE: IS READING ERR\n");
                         hunk_show(&hp, stderr);
                     }
                     return -1;
@@ -1684,7 +1660,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 }
                 c = hunk_getc(&hp, diff);
             }
-            //fprintf(stderr, "Change Header (after): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+            // fprintf(stderr, "Change Header (after): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
         }
         // printf("LINE count: %d", line_tracker);
         // printf("LINE count2: %d", line_tracker2);
