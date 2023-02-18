@@ -29,7 +29,7 @@ static int hunk_line = 0;
 static int add_count = 0;
 static int del_count = 0;
 static int valid = 0;
-
+static int eos_jump = 0;
 static int char_counter = 0;
 static int part1 = 0;
 static int part2 = 0;
@@ -232,7 +232,6 @@ int hunk_next(HUNK *hp, FILE *in) {
         }
     }
     reset(hp);
-    // printf("second call");
     //  Check if the hunk header is valid for the rest of the hunks
     while (read != EOF) {
         int flag = 0;
@@ -381,6 +380,9 @@ int hunk_next(HUNK *hp, FILE *in) {
         read = fgetc(in);
         if (read == '\n') {
             read = fgetc(in);
+            if (read == EOF) {
+                return EOF;
+            }
             if (read != '<' && read != '>' && read != '-' && (read < '0') && (read > '9')) {
                 return ERR;
             }
@@ -614,6 +616,10 @@ int hunk_getc(HUNK *hp, FILE *in) {
     if (header_read == 0) {
         return ERR;
     }
+    if (eos_jump == 1) {
+        eos_jump = 0;
+        goto eos_jump_label;
+    }
     int read = fgetc(in);
     if (hp->type == HUNK_APPEND_TYPE) {
         if (read == '\n') {
@@ -631,6 +637,10 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 letter = letter + 2;
                 hunk_line = 0;
                 ungetc(read, in);
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
             hunk_line = 0;
@@ -640,6 +650,21 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 if (read == ' ') {
                     add_count++;
                     read = fgetc(in);
+                    if (read == '\n') {
+                        char_counter++;
+                        unsigned char second_byte = (char_counter >> 8);
+                        unsigned char first_byte = char_counter & 0xff;
+                        *pointer = (char)first_byte;
+                        pointer++;
+                        *pointer = (char)second_byte;
+                        *letter = read;
+                        letter++;
+                        pointer = letter;
+                        letter = letter + 2;
+                        hunk_line = 0;
+                        ungetc(read, in);
+                        return read;
+                    }
                     hunk_line = 1;
                     char_counter = 0;
                     *letter = read;
@@ -656,9 +681,17 @@ int hunk_getc(HUNK *hp, FILE *in) {
                         pointer = letter;
                         letter = letter + 2;
                         hunk_line = 0;
+                        *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                        *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                        *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                        *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                         return ERR;
                     }
                     letter++;
+                    *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                    *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                    *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                    *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                     return read;
                 } else {
                     // printf("when it is not > ");
@@ -720,11 +753,19 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 add_count = 0;
                 hunk_line = 0;
                 // printf("1\n");
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return EOS;
             }
             *letter = read;
             letter++;
             char_counter++;
+            *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+            *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+            *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+            *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
             return read;
         } else {
             hunk_line = 0;
@@ -749,6 +790,10 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 letter2 = letter2 + 2;
                 hunk_line = 0;
                 ungetc(read, in);
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
             hunk_line = 0;
@@ -758,6 +803,21 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 if (read == ' ') {
                     del_count++;
                     read = fgetc(in);
+                    if (read == '\n') {
+                        char_counter++;
+                        unsigned char second_byte = (char_counter >> 8);
+                        unsigned char first_byte = char_counter & 0xff;
+                        *pointer2 = (char)first_byte;
+                        pointer2++;
+                        *pointer2 = (char)second_byte;
+                        *letter2 = read;
+                        letter2++;
+                        pointer2 = letter2;
+                        letter2 = letter2 + 2;
+                        hunk_line = 0;
+                        ungetc(read, in);
+                        return read;
+                    }
                     hunk_line = 1;
                     char_counter = 0;
                     *letter2 = read;
@@ -775,9 +835,17 @@ int hunk_getc(HUNK *hp, FILE *in) {
                         pointer2 = letter2;
                         letter2 = letter2 + 2;
                         hunk_line = 0;
+                        *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                        *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                        *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                        *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                         return ERR;
                     }
                     letter2++;
+                    *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                    *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                    *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                    *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                     return read;
                 } else {
                     // printf("when it is not < ");
@@ -842,11 +910,19 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 add_count = 0;
                 hunk_line = 0;
                 // printf("1\n");
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return EOS;
             }
             *letter2 = read;
             letter2++;
             char_counter++;
+            *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+            *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+            *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+            *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
             return read;
         } else {
             hunk_line = 0;
@@ -870,6 +946,10 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 letter2 = letter2 + 2;
                 hunk_line = 0;
                 ungetc(read, in);
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
             if (hunk_line == 1 && part1 == 1 && part2 == 1) {
@@ -885,41 +965,14 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 letter = letter + 2;
                 hunk_line = 0;
                 ungetc(read, in);
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
             hunk_line = 0;
             read = fgetc(in);
-            if (read == '<') {
-                read = fgetc(in);
-                if (read == ' ') {
-                    del_count++;
-                    read = fgetc(in);
-                    hunk_line = 1;
-                    char_counter = 0;
-                    *letter2 = read;
-                    char_counter++;
-                    if (del_count > hp->old_end - hp->old_start + 1) {
-                        // printf("TOO MANY LINES");
-                        unsigned char second_byte = (char_counter >> 8);
-                        unsigned char first_byte = char_counter & 0xff;
-                        *pointer2 = (char)first_byte;
-                        pointer2++;
-                        *pointer2 = (char)second_byte;
-                        *letter2 = read;
-                        letter2++;
-                        pointer2 = letter2;
-                        letter2 = letter2 + 2;
-                        hunk_line = 0;
-                        return ERR;
-                    }
-                    part1 = 1;
-                    letter2++;
-                    return read;
-                } else {
-                    // printf("when it is not < ");
-                    return ERR;
-                }
-            }
             if (read == '-') {
                 read = fgetc(in);
                 if (read == '-') {
@@ -937,6 +990,9 @@ int hunk_getc(HUNK *hp, FILE *in) {
                             }
                             read = fgetc(in);
                             part2 = 1;
+                            eos_jump = 1;
+                            return EOS;
+                        eos_jump_label:
                         } else {
                             // printf("when it is not --- new line");
                             return ERR;
@@ -950,11 +1006,80 @@ int hunk_getc(HUNK *hp, FILE *in) {
                     return ERR;
                 }
             }
+            if (read == '<') {
+                read = fgetc(in);
+                if (read == ' ') {
+                    del_count++;
+                    read = fgetc(in);
+                    if (read == '\n' && part2 == 0) {
+                        char_counter++;
+                        unsigned char second_byte = (char_counter >> 8);
+                        unsigned char first_byte = char_counter & 0xff;
+                        *pointer2 = (char)first_byte;
+                        pointer2++;
+                        *pointer2 = (char)second_byte;
+                        *letter2 = read;
+                        letter2++;
+                        pointer2 = letter2;
+                        letter2 = letter2 + 2;
+                        hunk_line = 0;
+                        ungetc(read, in);
+                        return read;
+                    }
+                    hunk_line = 1;
+                    char_counter = 0;
+                    *letter2 = read;
+                    char_counter++;
+                    if (del_count > hp->old_end - hp->old_start + 1) {
+                        // printf("TOO MANY LINES");
+                        unsigned char second_byte = (char_counter >> 8);
+                        unsigned char first_byte = char_counter & 0xff;
+                        *pointer2 = (char)first_byte;
+                        pointer2++;
+                        *pointer2 = (char)second_byte;
+                        *letter2 = read;
+                        letter2++;
+                        pointer2 = letter2;
+                        letter2 = letter2 + 2;
+                        hunk_line = 0;
+                        *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                        *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                        *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                        *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+                        return ERR;
+                    }
+                    part1 = 1;
+                    letter2++;
+                    *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                    *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                    *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                    *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
+                    return read;
+                } else {
+                    // printf("when it is not < ");
+                    return ERR;
+                }
+            }
             if (read == '>' && part1 == 1 && part2 == 1) {
                 read = fgetc(in);
                 if (read == ' ') {
                     add_count++;
                     read = fgetc(in);
+                    if (read == '\n' && part1 == 1 && part2 == 1) {
+                        char_counter++;
+                        unsigned char second_byte = (char_counter >> 8);
+                        unsigned char first_byte = char_counter & 0xff;
+                        *pointer = (char)first_byte;
+                        pointer++;
+                        *pointer = (char)second_byte;
+                        *letter = read;
+                        letter++;
+                        pointer = letter;
+                        letter = letter + 2;
+                        hunk_line = 0;
+                        ungetc(read, in);
+                        return read;
+                    }
                     hunk_line = 1;
                     char_counter = 0;
                     // printf("letter %c", *letter);
@@ -973,9 +1098,17 @@ int hunk_getc(HUNK *hp, FILE *in) {
                         pointer = letter;
                         letter = letter + 2;
                         hunk_line = 0;
+                        *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                        *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                        *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                        *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                         return ERR;
                     }
                     letter++;
+                    *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                    *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                    *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                    *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                     return read;
                 } else {
                     // printf("when it is not > ");
@@ -1005,7 +1138,7 @@ int hunk_getc(HUNK *hp, FILE *in) {
             } else {
                 add_count = 0;
                 hunk_line = 0;
-                // printf("%c", read);
+                printf("%c", read);
                 // printf("When line count doesnt add up\n");
                 return ERR;
             }
@@ -1035,12 +1168,20 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 add_count = 0;
                 hunk_line = 0;
                 // printf("wasdwa\n");
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return EOS;
             }
             if (part1 == 1 && part2 == 0) {
                 *letter2 = read;
                 letter2++;
                 char_counter++;
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
 
@@ -1064,6 +1205,10 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 *letter = 0x0;
                 add_count = 0;
                 hunk_line = 0;
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 // printf("are we reading from this?\n");
                 return EOS;
             }
@@ -1071,6 +1216,10 @@ int hunk_getc(HUNK *hp, FILE *in) {
                 *letter = read;
                 letter++;
                 char_counter++;
+                *(hunk_additions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_additions_buffer + HUNK_MAX - 2) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 1) = '\0';
+                *(hunk_deletions_buffer + HUNK_MAX - 2) = '\0';
                 return read;
             }
         } else {
@@ -1127,47 +1276,39 @@ void hunk_show(HUNK *hp, FILE *out) {
             fputc(',', out);
             fprintf(out, "%d", hp->new_end);
         }
-        fputc('\n', out);
-        fputc('>', out);
-        fputc(' ', out);
-        i += 2;
-        while (i < HUNK_MAX) {
-            if (*add_pointer == '\n') {
-                fputc('\n', out);
-                add_pointer++;
-                line_count_add++;
-                i++;
-                if (*add_pointer == 0) {
-                    // printf("%d", *(add_pointer));
-                    // printf("we are here\n");
+        if (!(*add_pointer == 0 && *(add_pointer + 1) == 0)) {
+            fputc('\n', out);
+            fputc('>', out);
+            fputc(' ', out);
+            i += 2;
+            add_pointer += 2;
+            while (i < HUNK_MAX - 2) {
+                if (*add_pointer == '\n') {
                     add_pointer++;
-                    if (*add_pointer == 0) {
-                        // printf("%d", *(add_pointer));
-                        // printf("we are here2\n");
-                        add_pointer++;
-                        i++;
+                    line_count_add++;
+                    i++;
+                    if (*add_pointer == 0 && *(add_pointer + 1) == 0) {
+                        break;
                     } else {
-                        add_pointer++;
-                        i++;
+                        fputc('\n', out);
                         fputc('>', out);
                         fputc(' ', out);
+                        i++;
+                        add_pointer++;
+                        i++;
+                        add_pointer++;
                     }
-                } else {
-                    add_pointer++;
-                    i++;
-                    fputc('>', out);
-                    fputc(' ', out);
                 }
+                fputc(*add_pointer, out);
+                add_pointer++;
+                i++;
             }
-            fputc(*add_pointer, out);
-            add_pointer++;
-            i++;
-        }
-        char *max = hunk_additions_buffer + HUNK_MAX - 3;
-        if (*max > 0) {
-            fputc('.', out);
-            fputc('.', out);
-            fputc('.', out);
+            char *max = hunk_additions_buffer + HUNK_MAX - 3;
+            if (i == HUNK_MAX - 2) {
+                fputc('.', out);
+                fputc('.', out);
+                fputc('.', out);
+            }
         }
         fputc('\n', out);
     }
@@ -1179,46 +1320,41 @@ void hunk_show(HUNK *hp, FILE *out) {
             fputc(',', out);
             fprintf(out, "%d", hp->old_end);
         }
-
         fputc('d', out);
         fprintf(out, "%d", hp->new_start);
-        fputc('\n', out);
-        fputc('<', out);
-        fputc(' ', out);
-        i += 2;
-        while (i < HUNK_MAX) {
-            if (*del_pointer == '\n' && ((hp->old_end - hp->old_start + 1) != line_count_del)) {
-                fputc('\n', out);
-                del_pointer++;
-                line_count_del++;
-                i++;
-                if (*del_pointer == 0) {
+        if (!(*del_pointer == 0 && *(del_pointer + 1) == 0)) {
+            fputc('\n', out);
+            fputc('<', out);
+            fputc(' ', out);
+            i += 2;
+            del_pointer += 2;
+            while (i < HUNK_MAX - 2) {
+                if (*del_pointer == '\n' && ((hp->old_end - hp->old_start + 1) != line_count_del)) {
                     del_pointer++;
-                    if (*del_pointer == 0) {
-                        del_pointer++;
-                        i++;
+                    line_count_del++;
+                    i++;
+                    if (*del_pointer == 0 && *(del_pointer + 1) == 0) {
+                        break;
                     } else {
-                        del_pointer++;
-                        i++;
+                        fputc('\n', out);
                         fputc('<', out);
                         fputc(' ', out);
+                        i++;
+                        del_pointer++;
+                        i++;
+                        del_pointer++;
                     }
-                } else {
-                    del_pointer++;
-                    i++;
-                    fputc('<', out);
-                    fputc(' ', out);
                 }
+                fputc(*del_pointer, out);
+                del_pointer++;
+                i++;
             }
-            fputc(*del_pointer, out);
-            del_pointer++;
-            i++;
-        }
-        char *max = hunk_deletions_buffer + HUNK_MAX - 3;
-        if (*max > 0) {
-            fputc('.', out);
-            fputc('.', out);
-            fputc('.', out);
+            char *max = hunk_deletions_buffer + HUNK_MAX - 3;
+            if (i == HUNK_MAX - 2) {
+                fputc('.', out);
+                fputc('.', out);
+                fputc('.', out);
+            }
         }
         fputc('\n', out);
     }
@@ -1238,86 +1374,78 @@ void hunk_show(HUNK *hp, FILE *out) {
             fputc(',', out);
             fprintf(out, "%d", hp->new_end);
         }
-        fputc('\n', out);
-        fputc('<', out);
-        fputc(' ', out);
-        i += 2;
-        while (i < HUNK_MAX) {
-            if (*del_pointer == '\n' && ((hp->old_end - hp->old_start + 1) != line_count_del)) {
-                fputc('\n', out);
-                del_pointer++;
-                line_count_del++;
-                i++;
-                if (*del_pointer == 0) {
+        if (!(*del_pointer == 0 && *(del_pointer + 1) == 0)) {
+            fputc('\n', out);
+            fputc('<', out);
+            fputc(' ', out);
+            i += 2;
+            del_pointer += 2;
+            while (i < HUNK_MAX - 2) {
+                if (*del_pointer == '\n' && ((hp->old_end - hp->old_start + 1) != line_count_del)) {
                     del_pointer++;
-                    if (*del_pointer == 0) {
-                        del_pointer++;
-                        i++;
+                    line_count_del++;
+                    i++;
+                    if (*del_pointer == 0 && *(del_pointer + 1) == 0) {
+                        break;
                     } else {
-                        del_pointer++;
-                        i++;
+                        fputc('\n', out);
                         fputc('<', out);
                         fputc(' ', out);
+                        i++;
+                        del_pointer++;
+                        i++;
+                        del_pointer++;
                     }
-                } else {
-                    del_pointer++;
-                    i++;
-                    fputc('<', out);
-                    fputc(' ', out);
                 }
-            }
-            fputc(*del_pointer, out);
-            del_pointer++;
-            i++;
-        }
-        char *max = hunk_deletions_buffer + HUNK_MAX - 3;
-        if (*max > 0) {
-            fputc('.', out);
-            fputc('.', out);
-            fputc('.', out);
-            fputc('\n', out);
-        }
-        fputc('-', out);
-        fputc('-', out);
-        fputc('-', out);
-        fputc('\n', out);
-        fputc('>', out);
-        fputc(' ', out);
-        j += 2;
-        add_pointer += 2;
-        while (j < HUNK_MAX) {
-            if (*add_pointer == '\n' && ((hp->new_end - hp->new_start + 1) != line_count_add)) {
-                fputc('\n', out);
-                add_pointer++;
-                line_count_add++;
+                fputc(*del_pointer, out);
+                del_pointer++;
                 i++;
-                if (*add_pointer == 0) {
+            }
+            char *max = hunk_deletions_buffer + HUNK_MAX - 3;
+            if (i == HUNK_MAX - 2) {
+                fputc('.', out);
+                fputc('.', out);
+                fputc('.', out);
+                fputc('\n', out);
+            }
+        }
+        fputc('\n', out);
+        fputc('-', out);
+        fputc('-', out);
+        fputc('-', out);
+        if (!(*add_pointer == 0 && *(add_pointer + 1) == 0)) {
+            fputc('\n', out);
+            fputc('>', out);
+            fputc(' ', out);
+            j += 2;
+            add_pointer += 2;
+            while (j < HUNK_MAX - 2) {
+                if (*add_pointer == '\n' && ((hp->new_end - hp->new_start + 1) != line_count_add)) {
                     add_pointer++;
-                    if (*add_pointer == 0) {
-                        add_pointer++;
-                        i++;
+                    line_count_add++;
+                    i++;
+                    if (*add_pointer == 0 && *(add_pointer + 1) == 0) {
+                        break;
                     } else {
-                        add_pointer++;
-                        i++;
+                        fputc('\n', out);
                         fputc('>', out);
                         fputc(' ', out);
+                        i++;
+                        add_pointer++;
+                        i++;
+                        add_pointer++;
                     }
-                } else {
-                    add_pointer++;
-                    i++;
-                    fputc('>', out);
-                    fputc(' ', out);
                 }
+                fputc(*add_pointer, out);
+                add_pointer++;
+                j++;
             }
-            fputc(*add_pointer, out);
-            add_pointer++;
-            j++;
-        }
-        char *max1 = hunk_additions_buffer + HUNK_MAX - 3;
-        if (*max1 > 0) {
-            fputc('.', out);
-            fputc('.', out);
-            fputc('.', out);
+            char *max1 = hunk_additions_buffer + HUNK_MAX - 3;
+            if (i == HUNK_MAX - 2) {
+                fputc('.', out);
+                fputc('.', out);
+                fputc('.', out);
+            }
         }
         fputc('\n', out);
     } else {
@@ -1388,17 +1516,19 @@ int patch(FILE *in, FILE *out, FILE *diff) {
     while ((a = hunk_next(&hp, diff)) == 0) {
         c = hunk_getc(&hp, diff);
         if (hp.type == HUNK_APPEND_TYPE) {
-            if (hp.old_start > hp.new_start) {
+            //fprintf(stderr, "Append Header (before): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+            /*if (hp.old_start > hp.new_start) {
+                fprintf(stderr, "Old start: %i, New start: %i", hp.old_start, hp.new_start);
                 if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
-                    fprintf(stderr, "ERROR: HUNK APPEND TYPE: OLD START IS GREATER THAN NEW START");
+                    fprintf(stderr, "ERROR: HUNK APPEND TYPE: OLD START IS GREATER THAN NEW START\n");
                     hunk_show(&hp, stderr);
                 }
                 // printf("ERROR: HUNK APPEND TYPE: OLD START IS GREATER THAN NEW START AND LESS THAN NEW END\n");
                 return -1;
-            }
+            }*/
             b = fgetc(in);
             if (line_tracker <= hp.old_start) {
-                while (line_tracker <= hp.old_start && line_tracker != 1) {
+                while (line_tracker <= hp.old_start) {
                     if ((global_options & NO_PATCH_OPTION) != NO_PATCH_OPTION) {
                         fputc(b, out);
                     }
@@ -1421,7 +1551,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 if ((global_options & NO_PATCH_OPTION) != NO_PATCH_OPTION) {
                     fputc('\n', out);
                 }
-                line_tracker++;
+                //line_tracker++;
             }
             if ((hp.new_start) == line_tracker2) {
                 while ((c) != EOS) {
@@ -1445,15 +1575,18 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 // printf("ERROR: HUNK APPEND TYPE: NEW START IS NOT EQUAL TO LINE IN\n");
                 // printf("HERE OR SOMETHING\n");
                 if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+                    //fprintf(stderr, "new_start: %d, line_tracker2: %d", hp.new_start, line_tracker2);
                     fprintf(stderr, "ERROR: HUNK APPEND TYPE: NEW START IS NOT EQUAL\n");
                     hunk_show(&hp, stderr);
                 }
                 return -1;
             }
+            //fprintf(stderr, "Append Header (after): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
         }
         if (hp.type == HUNK_DELETE_TYPE) {
+            //fprintf(stderr, "Delete Header (before): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
             ////printf("line tracker: %d\n\n\n\n", line_tracker);
-            while (line_tracker <= hp.old_start && line_tracker != 1) {
+            while (line_tracker < hp.old_start) {
                 b = fgetc(in);
                 // printf("b: %c\n", b);
                 if ((global_options & NO_PATCH_OPTION) != NO_PATCH_OPTION) {
@@ -1488,9 +1621,11 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 }
                 c = hunk_getc(&hp, diff);
             }
+            //fprintf(stderr, "Delete Header (after): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
         }
         if (hp.type == HUNK_CHANGE_TYPE) {
-            while (line_tracker <= hp.old_start && line_tracker != 1) {
+            //fprintf(stderr, "Change Header (before): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+            while (line_tracker < hp.old_start - 1) {
                 b = fgetc(in);
                 if ((global_options & NO_PATCH_OPTION) != NO_PATCH_OPTION) {
                     fputc(b, out);
@@ -1501,7 +1636,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 }
             }
             // printf("LINE TRACKER: %d", line_tracker);
-            while (c != EOS && line_del != (hp.old_end - hp.old_start + 1)) {
+            while (c != EOS) {
                 b = fgetc(in);
                 ////printf("c: %c\n", c);
                 ////printf("b: %c\n", b);
@@ -1513,6 +1648,8 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                     }
                     return -1;
                 }
+                //fprintf(stderr, "Change Header (During): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
+                //fprintf(stderr, "b: %c, c: %c \n", b, c);
                 if (b != c) {
                     // printf("ERROR: HUNK DELETE TYPE: B IS NOT EQUAL TO C\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
@@ -1527,17 +1664,18 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 }
                 (c = hunk_getc(&hp, diff));
             }
-            // printf("LINE DEL: %d", line_del);
+            c = hunk_getc(&hp, diff);
+            //fprintf(stderr, "LINE DEL: %c", c);
             while ((c) != EOS) {
+                //fprintf(stderr, "!");
                 if (c == ERR) {
                     // printf("ERROR: HUNK APPEND TYPE: C IS ERR\n");
                     if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
-                        fprintf(stderr, "ERROR: HUNK APPEND TYPE: IS READING ERR\n");
+                        //fprintf(stderr, "ERROR: HUNK APPEND TYPE: IS READING ERR\n");
                         hunk_show(&hp, stderr);
                     }
                     return -1;
                 }
-                ////printf("c: %c\n", c);
                 if ((global_options & NO_PATCH_OPTION) != NO_PATCH_OPTION) {
                     fputc(c, out);
                 }
@@ -1546,6 +1684,7 @@ int patch(FILE *in, FILE *out, FILE *diff) {
                 }
                 c = hunk_getc(&hp, diff);
             }
+            //fprintf(stderr, "Change Header (after): line_tracker: %d, line_tracker2: %d \n", line_tracker, line_tracker2);
         }
         // printf("LINE count: %d", line_tracker);
         // printf("LINE count2: %d", line_tracker2);

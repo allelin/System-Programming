@@ -18,19 +18,30 @@
 #endif
 
 int main(int argc, char **argv) {
-    if(validargs(argc, argv))
+    if (validargs(argc, argv))
         USAGE(*argv, EXIT_FAILURE);
-    if(global_options == HELP_OPTION)
-    {
-         USAGE(*argv, EXIT_SUCCESS);
+    if (global_options == HELP_OPTION) {
+        USAGE(*argv, EXIT_SUCCESS);
     }
     FILE *fp = fopen(diff_filename, "r");
+    if (fp == NULL) {
+        if ((global_options & QUIET_OPTION) != QUIET_OPTION) {
+            fprintf(stderr, "Error opening file %s", diff_filename);
+        }
+        return EXIT_FAILURE;
+    }
     if (patch(stdin, stdout, fp) == -1) {
         return EXIT_FAILURE;
     } else {
         return EXIT_SUCCESS;
     }
     return EXIT_FAILURE;
+
+    // HUNK hp;
+    // FILE *fp = fopen("rsrc/d.diff", "r");
+    // FILE *out = fopen("rsrc/test", "r+");
+    // FILE *in = fopen("rsrc/test1", "r");
+    // patch(in, out, fp);
 }
 
 /*
