@@ -24,6 +24,7 @@
 #define Strcpy (void)strcpy
 #define Strcat (void)strcat
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <sys/types.h>
