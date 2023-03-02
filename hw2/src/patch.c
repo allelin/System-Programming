@@ -344,34 +344,38 @@ void get_some_switches() {
     char *s;
 
     rejname[0] = '\0';
-    
+
     if (!Argc)
         return;
+    opterr = 0;
     while (1) {
-    int this_option_optind = optind ? optind : 1;
-    int option_index = 0;
-    static struct option long_options[] = {
-        {"backup-extension", required_argument, 0, 'b'},
-        {"context-diff", no_argument, 0, 'c'},
-        {"directory", required_argument, 0, 'd'},
-        {"do-defines", required_argument, 0, 'D'},
-        {"ed-script", no_argument, 0, 'e'},
-        {"loose-matching", no_argument, 0, 'l'},
-        {"normal-diff", no_argument, 0, 'n'},
-        {"output-file", required_argument, 0, 'o'},
-        {"pathnames", no_argument, 0, 'p'},
-        {"reject-file", required_argument, 0, 'r'},
-        {"reverse", no_argument, 0, 'R'},
-        {"silent", no_argument, 0, 's'},
-        {"debug", required_argument, 0, 'x'},
-        {0, 0, 0, 0}};
-        c = getopt_long(Argc, Argv, "-bcd:D:elnop:r:Rsx:",long_options, &option_index);
+        int this_option_optind = optind ? optind : 1;
+        int option_index = 0;
+        static struct option long_options[] = {
+            {"backup-extension", required_argument, 0, 'b'},
+            {"context-diff", no_argument, 0, 'c'},
+            {"directory", required_argument, 0, 'd'},
+            {"do-defines", required_argument, 0, 'D'},
+            {"ed-script", no_argument, 0, 'e'},
+            {"loose-matching", no_argument, 0, 'l'},
+            {"normal-diff", no_argument, 0, 'n'},
+            {"output-file", required_argument, 0, 'o'},
+            {"pathnames", no_argument, 0, 'p'},
+            {"reject-file", required_argument, 0, 'r'},
+            {"reverse", no_argument, 0, 'R'},
+            {"silent", no_argument, 0, 's'},
+            {"debug", required_argument, 0, 'x'},
+            {0, 0, 0, 0}};
+        c = getopt_long(Argc, Argv, "-b:cd:D:elno:pr:Rsx:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
             case 1:
+                if (strEQ(optarg, "+")) {
+                    return;
+                }
                 if (filec == MAXFILEC)
-                    fatal("Too many file names.\n");
+                    fatal("Too many file arguments.\n");
                 filearg[filec++] = savestr(optarg);
                 break;
             case 'b':
@@ -420,7 +424,7 @@ void get_some_switches() {
                 break;
 #endif
             default:
-                fatal("Unrecognized switch: %s\n", Argv[0]);
+                fatal("Unrecognized switch: %s\n", Argv[optind - 1]);
                 break;
         }
     }
