@@ -420,7 +420,7 @@ void get_some_switches() {
                 break;
 #endif
             default:
-                fatal("Unrecognized switch: %s\n", Argv[optind - 1]);
+                fatal("Unrecognized switch: %s\n", Argv[0]);
                 break;
         }
     }
