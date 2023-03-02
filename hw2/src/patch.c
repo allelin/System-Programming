@@ -419,13 +419,8 @@ void get_some_switches() {
                 debug = atoi(optarg);
                 break;
 #endif
-            case '?':
-                fatal("Unrecognized switch: %s\n", Argv[optind - 1]);
-                break;
-            case '+':
-                return; /* suspend option processing */
-                break;
             default:
+                fatal("Unrecognized switch: %s\n", Argv[optind - 1]);
                 break;
         }
     }
