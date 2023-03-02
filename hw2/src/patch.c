@@ -345,7 +345,8 @@ void get_some_switches() {
 
     rejname[0] = '\0';
     
-
+    if (!Argc)
+        return;
     while (1) {
     int this_option_optind = optind ? optind : 1;
     int option_index = 0;
