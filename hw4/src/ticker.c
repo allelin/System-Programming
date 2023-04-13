@@ -13,24 +13,6 @@
 #include "debug.h"
 #include "watcher.h"
 
-// enum WatcherStatus {
-//     // Define the watcher status
-//     WATCHER_RUNNING,
-//     WATCHER_STOPPING,
-//     WATCHER_STOPPED
-// };
-// typedef struct watcher {
-//     // Define the watcher structure
-//     int id;
-//     int read_pipe;
-//     int write_pipe;
-//     int tracing_enabled;
-//     char *arguments[10];
-//     char *partial_input;
-//     enum WatcherStatus status;
-//     int type_watcher;
-// } WATCHER;
-
 int quit_watchers() {
     // Loop through the array and free all the watchers
     for (size_t i = 0; i < watcher_array_size; i++) {
@@ -77,6 +59,7 @@ void handler_signals(int sig, siginfo_t *siginfo, void *context) {
             pid_t pid;
             while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
                 printf("Child %d terminated with status %d", pid, status);
+                debug("Child %d terminated with status %d", pid, status);
                 // GET the watcher based on the pid
                 // WATCHER *watcher = get_watcher_by_pid(pid);
                 // wp->status = TERMINATED;
