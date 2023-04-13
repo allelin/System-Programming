@@ -1,4 +1,3 @@
-#include "cli.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -14,7 +13,7 @@
 #include "store.h"
 #include "ticker.h"
 #include "watcher.h"
-
+#include "cli.h"
 WATCHER_TYPE *cli_watcher_type = &watcher_types[CLI_WATCHER_TYPE];
 volatile int first_call = 1;
 // static struct watcher **watcher_arrays;
