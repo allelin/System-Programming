@@ -24,11 +24,15 @@ typedef struct watcher {
     int type_watcher;
 
 } WATCHER;
-static struct watcher **watcher_arrays;
-static size_t watcher_array_size;
+extern struct watcher **watcher_arrays;
+extern size_t watcher_array_size;
+extern size_t watcher_array_capacity;
 
 // quit the program gracefully
 extern int quit_watchers();
+extern int add_watcher(WATCHER *wp);
+extern int remove_watcher(int watcher_id);
+// extern struct WATCHER;
 #endif
 
 // typedef struct {

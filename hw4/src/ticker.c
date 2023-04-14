@@ -17,6 +17,8 @@ int quit_watchers() {
     // Loop through the array and free all the watchers
     for (size_t i = 0; i < watcher_array_size; i++) {
         if (watcher_arrays[i] != NULL) {
+            // Call the stop function
+            watcher_types[watcher_arrays[i]->type_watcher].stop(watcher_arrays[i]);
             free(watcher_arrays[i]);
         }
     }
@@ -34,6 +36,16 @@ volatile sig_atomic_t signal_sigchld = 0;
 volatile sig_atomic_t signal_sigio = 0;
 volatile sig_atomic_t signal_first_time = 1;
 
+WATCHER *get_watcher(pid_t pid) {
+    for (size_t i = 0; i < watcher_array_size; i++) {
+        if (watcher_arrays[i] != NULL) {
+            if (watcher_arrays[i]->pid == pid) {
+                return watcher_arrays[i];
+            }
+        }
+    }
+    return NULL;
+}
 void handler_signals(int sig, siginfo_t *siginfo, void *context) {
     switch (sig) {
         case SIGIO: {
@@ -58,11 +70,10 @@ void handler_signals(int sig, siginfo_t *siginfo, void *context) {
             int status;
             pid_t pid;
             while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-                printf("Child %d terminated with status %d", pid, status);
+                // printf("Child %d terminated with status %d", pid, status);
                 debug("Child %d terminated with status %d", pid, status);
-                // GET the watcher based on the pid
-                // WATCHER *watcher = get_watcher_by_pid(pid);
-                // wp->status = TERMINATED;
+                WATCHER *watcher = get_watcher(pid);
+                watcher->status = WATCHER_STOPPED;
             }
             break;
         }
@@ -221,6 +232,31 @@ int ticker(void) {
             if (quit_flag == 1) {
                 quit_watchers();
                 break;
+            }
+        }
+        // if signal_sigchld == 1 
+        /*
+        Searched through the list for any watchers which were marked as
+        STOPPED, then removed them from the watcher list
+        */
+        if (signal_sigchld == 1) {
+            debug("SIGCHLD");
+            signal_sigchld = 0;
+            int indexes[watcher_array_size];
+            memset(indexes, 0, sizeof(int));
+            int counter = 0;
+            for (int i = 0; i < watcher_array_size; i++) {
+                debug("watcher_arrays[%d]->status: %d", i, watcher_arrays[i]->status);
+                if (watcher_arrays[i]->status == WATCHER_STOPPED) {
+                    // store the indexes of the watchers that are stopping
+                    indexes[counter] = i;
+                    counter++;
+                }
+            }
+            debug("counter: %d", counter);
+            // remove the watchers from the list
+            for (int i = 0; i < counter; i++) {
+                remove_watcher(indexes[i]);
             }
         }
 
