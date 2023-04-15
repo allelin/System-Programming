@@ -209,6 +209,8 @@ int bitstamp_watcher_recv(WATCHER *wp, char *txt) {
         wp->serial_number++;
         tracing(wp, txt);
         // printf("Tracing: %s", txt);
+    } else {
+        wp->serial_number++;
     }
     // loop the string to the first { and cut the last 2 characters
     size_t len = strlen(txt);

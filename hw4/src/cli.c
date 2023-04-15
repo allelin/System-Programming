@@ -166,6 +166,9 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
         wp->serial_number++;
         tracing(wp, txt);
         // return 0;
+    } else {
+        // update the serial number
+        wp->serial_number++;
     }
 
     char *current_command = txt;
