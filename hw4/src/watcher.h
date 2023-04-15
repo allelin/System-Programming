@@ -18,11 +18,11 @@ typedef struct watcher {
     int read_pipe;
     int write_pipe;
     int tracing_enabled;
-    char *arguments[10];
+    char** arguments;
     char *partial_input;
     enum WatcherStatus status;
     int type_watcher;
-
+    int serial_number;
 } WATCHER;
 extern struct watcher **watcher_arrays;
 extern size_t watcher_array_size;
@@ -32,6 +32,8 @@ extern size_t watcher_array_capacity;
 extern int quit_watchers();
 extern int add_watcher(WATCHER *wp);
 extern int remove_watcher(int watcher_id);
+extern char *get_timestamp();
+extern void tracing(WATCHER *wp, char *message);
 // extern struct WATCHER;
 #endif
 

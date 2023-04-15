@@ -1,10 +1,11 @@
-
+// #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -13,6 +14,8 @@
 #include "store.h"
 #include "ticker.h"
 #include "watcher.h"
+#include "argo.h"
+#include "store.h"
 #include "cli.h"
 WATCHER_TYPE *cli_watcher_type = &watcher_types[CLI_WATCHER_TYPE];
 volatile int first_call = 1;
@@ -42,6 +45,12 @@ int add_watcher(WATCHER *wp) {
     // add the watcher to the array with index i
     watcher_arrays[i] = wp;
     // watcher_array_size += 1;
+    debug("Added watcher with id %ld", i);
+    debug("watcher_array[i] = %d", watcher_arrays[i]->id);
+    debug("watcher_array[i] = %d", watcher_arrays[i]->id);
+    debug("watcher_array[i] = %d", watcher_arrays[i]->id);
+    debug("watcher_array[i] = %d", watcher_arrays[i]->id);
+    debug("watcher_array[i] = %d", watcher_arrays[i]->id);
     return i;
 }
 
@@ -57,9 +66,49 @@ int remove_watcher(int watcher_id) {
     }
 }
 
+// trace function
+/*
+If trace is enabled, you trace the received message (write a function for this)
+*/
+char *get_timestamp() {
+    // struct timeval tv;
+    // gettimeofday(&tv, NULL);
+    // snprintf(timestamp, timestamp_size, "[%ld.%06ld]", (long)tv.tv_sec, (long)tv.tv_usec);
+
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    int seconds = (int)ts.tv_sec;
+    int microseconds = (int)(ts.tv_nsec / 1000);
+    debug("seconds: %d", seconds);
+    debug("microseconds: %d", microseconds);
+    // char *timestamp = (char *) malloc(sizeof(char) * 20);
+    char *timestamp = NULL;
+    asprintf(&timestamp, "[%010d.%06d]", seconds, microseconds);
+    return timestamp;
+}
+
+void tracing(WATCHER *wp, char *message) {
+    if (wp->tracing_enabled) {
+        // write the message to the file
+        char *timestamp = get_timestamp();
+        // printf("%s\n", timestamp);
+        char *combined_string = NULL;
+        int check = asprintf(&combined_string, "%s[%s][ %d][   %d]: > %s", timestamp, watcher_types[wp->type_watcher].name, wp->read_pipe, wp->serial_number, message);
+        // print everything to standard error output
+        if (check < 0) {
+            debug("Error in asprintf");
+            exit(1);
+        }
+        fprintf(stderr, "%s\n", combined_string);
+        // free
+        free(timestamp);
+        free(combined_string);
+    }
+}
+
 WATCHER *cli_watcher_start(WATCHER_TYPE *type, char *args[]) {
     // IF ITS THE FIRST TIME IT IS BEING CALLED THEN WE SHOULD INITIALIZE THE ARRAY AND ALSO MAKE SURE IT CAN ONLY BE CALLED ONCE FOR CLI
-    if (first_call) {
+    if (first_call || watcher_array_size == 0) {
         // Initialize the array
         // Set the first_call flag to 0
         first_call = 0;
@@ -68,8 +117,10 @@ WATCHER *cli_watcher_start(WATCHER_TYPE *type, char *args[]) {
         watcher_arrays = malloc(watcher_array_size * sizeof(struct watcher *));
     } else {
         // Throw an error
-        perror("CLI watcher can only be called once");
-        exit(1);
+        // perror("CLI watcher can only be called once");
+        // exit(1);
+        debug("CLI watcher can only be called once");
+        return NULL;
     }
 
     // Allocate memory for the watcher struct
@@ -86,6 +137,7 @@ WATCHER *cli_watcher_start(WATCHER_TYPE *type, char *args[]) {
     wp->read_pipe = STDIN_FILENO;
     wp->write_pipe = STDOUT_FILENO;
     wp->tracing_enabled = 0;
+    wp->serial_number = 0;
     // add the rest later
 
     // Add the watcher to the array
@@ -107,6 +159,15 @@ int cli_watcher_send(WATCHER *wp, void *arg) {
 }
 
 int cli_watcher_recv(WATCHER *wp, char *txt) {
+    // check if trace is enabled
+    if (wp->tracing_enabled == 1) {
+        // trace the message
+        // update the serial number
+        wp->serial_number++;
+        tracing(wp, txt);
+        // return 0;
+    }
+
     char *current_command = txt;
     // size_t current_command_size = 0;
     int current_read_bytes = strlen(txt);
@@ -149,7 +210,7 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
     // Based on the number of commands we need to call each one by one using getline
     debug("space_counter: %d", space_counter);
     debug("words[0]: %s", words[0]);
-    
+
     debug("\n");
     debug("\n");
     debug("\n");
@@ -159,6 +220,7 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
         // this means there is only one argument
         debug("words[0]: %s", words[0]);
         debug("%d", strcmp(words[0], "quit"));
+        debug("watcher_arrays[0]->id: %d", watcher_arrays[0]->id);
         if (strcmp(words[0], "quit") == 0) {
             quit_watchers();
         } else if (strcmp(words[0], "watchers") == 0) {
@@ -197,8 +259,8 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
                                 exit(1);  // Check if its return or exit
                             }
                             cli_watcher_send(watcher_arrays[0], buffer1);
-                             free(buffer1);
-                             buffer1 = NULL;
+                            free(buffer1);
+                            buffer1 = NULL;
                         }
                         // print out the arguments of the watcher
                         for (int j = 0; watcher_arrays[active]->arguments[j] != NULL; j++) {
@@ -218,11 +280,10 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
                             buffer2 = NULL;
                         }
                     }
-                     cli_watcher_send(watcher_arrays[0], "\n");
+                    cli_watcher_send(watcher_arrays[0], "\n");
                 }
                 active++;
             }
-            
             cli_watcher_send(watcher_arrays[0], "ticker> ");
             return 0;
         } else {
@@ -244,16 +305,24 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
                     if (watcher_arrays[index]->status == WATCHER_RUNNING) {
                         // set the tracing flag to 1
                         cli_watcher_trace(watcher_arrays[index], 1);
+                        cli_watcher_send(watcher_arrays[0], "ticker> ");
+                        return 0;
                     } else {
                         debug("Watcher with id %d is not running", index);
+                        cli_watcher_send(wp, "???");
+                        cli_watcher_send(watcher_arrays[0], "\nticker> ");
                         return 1;
                     }
                 } else {
                     debug("Watcher with id %d does not exist", index);
+                    cli_watcher_send(wp, "???");
+                    cli_watcher_send(watcher_arrays[0], "\nticker> ");
                     return 1;
                 }
             } else {
                 debug("Watcher with id %d does not exist", index);
+                cli_watcher_send(wp, "???");
+                cli_watcher_send(watcher_arrays[0], "\nticker> ");
                 return 1;
             }
         }
@@ -268,25 +337,35 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
                     if (watcher_arrays[index]->status == WATCHER_RUNNING) {
                         // set the tracing flag to 1
                         cli_watcher_trace(watcher_arrays[index], 0);
+                        cli_watcher_send(watcher_arrays[0], "ticker> ");
+                        return 0;
                     } else {
                         debug("Watcher with id %d is not running", index);
+                        cli_watcher_send(wp, "???");
+                        cli_watcher_send(watcher_arrays[0], "\nticker> ");
                         return 1;
                     }
                 } else {
                     debug("Watcher with id %d does not exist", index);
+                    cli_watcher_send(wp, "???");
+                    cli_watcher_send(watcher_arrays[0], "\nticker> ");
                     return 1;
                 }
             } else {
                 debug("Watcher with id %d does not exist", index);
+                cli_watcher_send(wp, "???");
+                cli_watcher_send(watcher_arrays[0], "\nticker> ");
                 return 1;
             }
-        } 
-        // stop 
+        }
+        // stop
         else if ((strcmp(words[0], "stop") == 0)) {
             // check if the second argument is a number
             int index = atoi(words[1]);
             if (index == 0) {
-                perror("Error: Cannot stop the CLI");
+                // perror("Error: Cannot stop the CLI");
+                cli_watcher_send(wp, "???");
+                cli_watcher_send(watcher_arrays[0], "\nticker> ");
                 return 1;
             }
             if (index < watcher_array_size) {
@@ -301,26 +380,60 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
                         return 0;
                     } else {
                         debug("Watcher with id %d is not running", index);
+                        cli_watcher_send(wp, "???");
+                        cli_watcher_send(watcher_arrays[0], "\nticker> ");
                         return 1;
                     }
                 } else {
                     debug("Watcher with id %d does not exist", index);
+                    cli_watcher_send(wp, "???");
+                    cli_watcher_send(watcher_arrays[0], "\nticker> ");
                     return 1;
                 }
             } else {
                 debug("Watcher with id %d does not exist", index);
+                cli_watcher_send(wp, "???");
+                cli_watcher_send(watcher_arrays[0], "\nticker> ");
+                return 1;
+            }
+        } 
+            // show
+            // get stuff from the store and outputs it
+        else if (strcmp(words[0], "show") == 0) {
+            // second argument is the key 
+            struct store_value *value_from_key = store_get(words[1]);
+            debug("1");
+            if (value_from_key != 0) {
+                // key does exist in the store
+                char *from_key = NULL;
+                cli_watcher_send(wp, words[1]);
+                cli_watcher_send(wp, "\t");
+                debug("2");
+                asprintf(&from_key, "%f", value_from_key->content.double_value);
+                debug("3");
+                cli_watcher_send(wp, from_key);
+                debug("4");
+                free(from_key);
+                store_free_value(value_from_key);
+                cli_watcher_send(watcher_arrays[0], "\nticker> ");
+                return 0;
+            } else {
+                // key does not exist in the store
+                cli_watcher_send(wp, "???");
+                cli_watcher_send(watcher_arrays[0], "\nticker> ");
                 return 1;
             }
         }
         else {
-        cli_watcher_send(wp, "???");
-        cli_watcher_send(watcher_arrays[0], "\nticker> ");
-        return 1;
+            cli_watcher_send(wp, "???");
+            cli_watcher_send(watcher_arrays[0], "\nticker> ");
+            return 1;
+        }
+        
+        
     }
-        // show
-    } 
-    if (space_counter >= 1) {
-        // start 
+    if (space_counter > 1) {
+        // start
         debug("space_counter: %d", space_counter);
         if (strcmp(words[0], "start") == 0) {
             debug("words[1]: %s", words[1]);
@@ -335,26 +448,27 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
                 if (strcmp(words[1], watcher_types[i].name) == 0) {
                     debug("THEY ARE THE SAME");
                     // get the rest of the arguments and store it in a char array
-                    char *args[space_counter-1];
+                    char *args[space_counter - 1];
                     debug("space_counter: %d", space_counter);
                     args[0] = '\0';
                     for (int j = 0; j < space_counter - 1; j++) {
                         args[j] = words[j + 2];
                         debug("args[%d]: %s", j, args[j]);
                     }
-                    args[space_counter-1] = NULL;
+                    args[space_counter - 1] = NULL;
                     debug("args[space_counter]: %s", args[space_counter]);
                     // call the start function of bitstamp watcher
-                    watcher_types[i].start(&watcher_types[i], args); // we could send the watcher to something later if we need that step
+                    watcher_types[i].start(&watcher_types[i], args);  // we could send the watcher to something later if we need that step
                     break;
                 }
             }
             cli_watcher_send(watcher_arrays[0], "ticker> ");
+            return 0;
         } else {
-        cli_watcher_send(wp, "???");
-        cli_watcher_send(watcher_arrays[0], "\nticker> ");
-        return 1;
-    }
+            cli_watcher_send(wp, "???");
+            cli_watcher_send(watcher_arrays[0], "\nticker> ");
+            return 1;
+        }
     } else {
         cli_watcher_send(wp, "???");
         cli_watcher_send(watcher_arrays[0], "\nticker> ");
@@ -364,6 +478,11 @@ int cli_watcher_recv(WATCHER *wp, char *txt) {
 }
 
 int cli_watcher_trace(WATCHER *wp, int enable) {
-    wp->tracing_enabled = enable;
-    return 0;
+    if (enable == 0) {
+        wp->tracing_enabled = 0;
+        return 0;
+    } else {
+        wp->tracing_enabled = 1;
+        return 0;
+    }
 }
