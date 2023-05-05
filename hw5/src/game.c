@@ -260,9 +260,9 @@ int game_is_over(GAME *game) {
         debug("game_is_over: game is NULL");
         return -1;
     }
-    pthread_mutex_lock(&game->lock);
+    // pthread_mutex_lock(&game->lock);
     int state = game->state;
-    pthread_mutex_unlock(&game->lock);
+    // pthread_mutex_unlock(&game->lock);
     return state;
 }
 
@@ -271,9 +271,9 @@ GAME_ROLE game_get_winner(GAME *game) {
         debug("game_get_winner: game is NULL");
         return NULL_ROLE;
     }
-    pthread_mutex_lock(&game->lock);
+    // pthread_mutex_lock(&game->lock);
     GAME_ROLE winner = game->winner;
-    pthread_mutex_unlock(&game->lock);
+    // pthread_mutex_unlock(&game->lock);
     return winner;
 }
 
@@ -286,8 +286,14 @@ GAME_MOVE *game_parse_move(GAME *game, GAME_ROLE role, char *str) {
         debug("game_parse_move: str is NULL");
         return NULL;
     }
-
     pthread_mutex_lock(&game->lock);
+    if (role != NULL_ROLE) {
+        if (game->whose_turn != role) {
+            debug("game_parse_move: it is not this player's turn");
+            pthread_mutex_unlock(&game->lock);
+            return NULL;
+        }
+    }
     if (game->state != 0) {
         debug("game_parse_move: game is not in progress");
         pthread_mutex_unlock(&game->lock);
