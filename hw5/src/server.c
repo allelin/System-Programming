@@ -101,11 +101,12 @@ void *jeux_client_service(void *arg) {
                     free(username);
                 } else {
                     debug("Client login success");
-                    header->type = JEUX_ACK_PKT;
-                    header->size = 0;
-                    header->id = 0;
-                    header->role = 0;
-                    client_send_packet(client, header, NULL);
+                    // header->type = JEUX_ACK_PKT;
+                    // header->size = 0;
+                    // header->id = 0;
+                    // header->role = 0;
+                    // client_send_packet(client, header, NULL);
+                    client_send_ack(client, NULL, 0);
                     debug("client_fd: %d", client_fd);
                     // free(player);
                     free(username);
@@ -127,11 +128,12 @@ void *jeux_client_service(void *arg) {
                 PLAYER **players = creg_all_players(client_registry);
                 debug("players");
                 if (players[0] == NULL) {
-                    header->type = JEUX_NACK_PKT;
-                    header->size = 0;
-                    header->id = 0;
-                    header->role = 0;
-                    client_send_packet(client, header, NULL);
+                    // header->type = JEUX_NACK_PKT;
+                    // header->size = 0;
+                    // header->id = 0;
+                    // header->role = 0;
+                    // client_send_packet(client, header, NULL);
+                    client_send_nack(client);
                     break;
                 }
                 debug("players[0] != NULL");
@@ -163,11 +165,12 @@ void *jeux_client_service(void *arg) {
                 debug("pl: %s", pl);
                 // debug("char_count: %d", char_count);
                 strcat(pl, "\0");
-                header->type = JEUX_ACK_PKT;
-                header->size = ntohs(strlen(pl) + 1);
-                header->id = 0;
-                header->role = 0;
-                client_send_packet(client, header, pl);
+                // header->type = JEUX_ACK_PKT;
+                // header->size = ntohs(strlen(pl) + 1);
+                // header->id = 0;
+                // header->role = 0;
+                // client_send_packet(client, header, pl);
+                client_send_ack(client, pl, strlen(pl) + 1);
                 free(pl);
                 free(players);
                 if (payload != NULL) {
@@ -220,14 +223,19 @@ void *jeux_client_service(void *arg) {
                     int id = client_make_invitation(client, target, role_client, role_target);
                     if (id == -1) {
                         debug("Client make invitation failed");
-                        
                         client_send_nack(client);
                         free(username);
                         client_unref(target, "jeux_client_service");
                         break;
                     }
+                    struct timespec ts;
+                    clock_gettime(CLOCK_MONOTONIC, &ts);
+                    header->type = JEUX_ACK_PKT;
                     header->id = id;
                     header->size = 0;
+                    header->role = 0;
+                    header->timestamp_sec = htonl(ts.tv_sec);
+                    header->timestamp_nsec = htonl(ts.tv_nsec);
                     client_send_packet(client, header, NULL);
                     free(username);
                 }
@@ -252,9 +260,10 @@ void *jeux_client_service(void *arg) {
                     client_send_nack(client);
                 } else {
                     debug("Client revoke success");
-                    header->type = JEUX_ACK_PKT;
-                    header->size = 0;
-                    client_send_packet(client, header, NULL);
+                    // header->type = JEUX_ACK_PKT;
+                    // header->size = 0;
+                    // client_send_packet(client, header, NULL);
+                    client_send_ack(client, NULL, 0);
                 }
                 if (payload != NULL) {
                     free(payload);
@@ -279,9 +288,10 @@ void *jeux_client_service(void *arg) {
                     client_send_nack(client);
                 } else {
                     debug("Client decline success");
-                    header->type = JEUX_ACK_PKT;
-                    header->size = 0;
-                    client_send_packet(client, header, NULL);
+                    // header->type = JEUX_ACK_PKT;
+                    // header->size = 0;
+                    // client_send_packet(client, header, NULL);
+                    client_send_ack(client, NULL, 0);
                 }
                 free(payload);
                 break;
@@ -312,8 +322,9 @@ void *jeux_client_service(void *arg) {
                         header->type = JEUX_ACK_PKT;
                         // send ack to urself
                         debug("state: %s", state);
-                        header->size = ntohs(strlen(state) + 1);
-                        client_send_packet(client, header, state);
+                        // header->size = ntohs(strlen(state) + 1);
+                        // client_send_packet(client, header, state);
+                        client_send_ack(client, state, strlen(state) + 1);
                     }
                 }
                 free(state);
@@ -400,8 +411,9 @@ void *jeux_client_service(void *arg) {
     PLAYER *player = client_get_player(client);
     if (player != NULL) {
         player_unref(player, "jeux_client_service");
+        client_logout(client);
     }
-    client_logout(client);
+    
     creg_unregister(client_registry, client);
     free(header);
     close(client_fd);
