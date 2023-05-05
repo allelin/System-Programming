@@ -39,6 +39,7 @@ PLAYER *player_ref(PLAYER *player, char *why) {
     }
     pthread_mutex_lock(&player->lock);
     player->ref++;
+    debug("PLAYER REF: %d", player->ref);
     debug("player_ref: %s", why);
     pthread_mutex_unlock(&player->lock);
     return player;

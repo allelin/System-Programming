@@ -85,9 +85,10 @@ void *jeux_client_service(void *arg) {
                     free(username);
                     client_send_nack(client);
                     break;
-                } else {
-                    player_ref(player, "jeux_client_service");
-                }
+                } 
+                // else {
+                //     player_ref(player, "jeux_client_service");
+                // }
                 if (client_login(client, player) == -1) {
                     debug("Client login failed");
                     // header->type = JEUX_NACK_PKT;
@@ -122,7 +123,7 @@ void *jeux_client_service(void *arg) {
                     client_send_nack(client);
                     break;
                 }
-                int char_count = 0;
+                // int char_count = 0;
                 PLAYER **players = creg_all_players(client_registry);
                 debug("players");
                 if (players[0] == NULL) {
@@ -137,7 +138,7 @@ void *jeux_client_service(void *arg) {
                 // loop through the players to get total size
                 int i = 0;
                 char *rating = NULL;
-                debug("char_count: %d", char_count);
+                // debug("char_count: %d", char_count);
                 char *pl = malloc(1);
                 strcpy(pl, "\0");
                 int len = 0;
@@ -217,6 +218,14 @@ void *jeux_client_service(void *arg) {
                         break;
                     }
                     int id = client_make_invitation(client, target, role_client, role_target);
+                    if (id == -1) {
+                        debug("Client make invitation failed");
+                        
+                        client_send_nack(client);
+                        free(username);
+                        client_unref(target, "jeux_client_service");
+                        break;
+                    }
                     header->id = id;
                     header->size = 0;
                     client_send_packet(client, header, NULL);

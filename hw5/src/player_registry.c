@@ -86,6 +86,7 @@ PLAYER *preg_register(PLAYER_REGISTRY *preg, char *name) {
     }
     player->next = preg->head;
     preg->head = player;
+    player_ref(player, "preg_register");
     pthread_mutex_unlock(&preg->lock);
     return player;
 }
