@@ -27,6 +27,11 @@ static void terminate(int status);
 static void sighup_handler(int sig) {
     terminate(EXIT_SUCCESS);
 }
+static void sigpipe_handler(int sig) {
+    // do nothing
+    debug("sigpipe_handler: sigpipe received");
+}
+
 void *thread(void *vargp);
 /*
  * "Jeux" game server.
@@ -86,6 +91,15 @@ int main(int argc, char* argv[]){
         terminate(EXIT_FAILURE);
     }
 
+    // install the sigpipe handler
+    struct sigaction sa2;
+    sa2.sa_handler = sigpipe_handler;
+    sa2.sa_flags = 0;
+    sigemptyset(&sa2.sa_mask);
+    if (sigaction(SIGPIPE, &sa2, NULL) == -1) {
+        fprintf(stderr, "sigaction error: %s\n", strerror(errno));
+        terminate(EXIT_FAILURE);
+    }
     int listenfd, *connfd; 
     socklen_t clientlen; 
     struct sockaddr_storage clientaddr;
