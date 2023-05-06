@@ -214,8 +214,8 @@ int inv_accept(INVITATION *inv) {
     }
     inv->game = game;
     // set up the source and target roles
-    client_ref(inv->source, "inv_accept");
-    client_ref(inv->target, "inv_accept");
+    // client_ref(inv->source, "inv_accept");
+    // client_ref(inv->target, "inv_accept");
     
     pthread_mutex_unlock(&inv->lock);
     return 0;
