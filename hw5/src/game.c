@@ -235,22 +235,29 @@ char *game_unparse_state(GAME *game) {
         return NULL;
     }
     pthread_mutex_lock(&game->lock);
-    char *state = malloc(6 * 5 * sizeof(char) + 1);
+    char *state = malloc(6 * 5 * sizeof(char) + 12);
     if (state == NULL) {
         debug("game_unparse_state: malloc failed");
         pthread_mutex_unlock(&game->lock);
         return NULL;
     }
-    //set the state to a empty string
-    memset(state, 0, 6 * 5 * sizeof(char));
+    // set the state to a empty string
+    memset(state, 0, 6 * 5 * sizeof(char) + 12);
     for (int i = 0; i < 3; i++) {
-    char row[8];
-    snprintf(row, sizeof(row), "%c|%c|%c\n", game->board[i][0], game->board[i][1], game->board[i][2]);
-    strcat(state, row);
-    if (i != 2) {
-        strcat(state, "-----\n");
+        char row[8];
+        snprintf(row, sizeof(row), "%c|%c|%c\n", game->board[i][0], game->board[i][1], game->board[i][2]);
+        strcat(state, row);
+        if (i != 2) {
+            strcat(state, "-----\n");
+        }
     }
-}
+    // include the to move line
+    if (game->state == 0) {
+        char *to_move = game->whose_turn == FIRST_PLAYER_ROLE ? "X" : "O";
+        char to_move_line[11];
+        snprintf(to_move_line, sizeof(to_move_line), "%s to move\n\n", to_move);
+        strcat(state, to_move_line);
+    }
     pthread_mutex_unlock(&game->lock);
     return state;
 }
