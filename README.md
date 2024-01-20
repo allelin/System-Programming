@@ -1,41 +1,22 @@
-Allen Lin
-114570336
-:salute:
-Professor Stark - 01
-ACADEMIC HONESTY STATEMENT
-================================================================================
-I certify the following:
+# Homework Assignments
 
-1. All files hosted in this repository at any time, including any written
-material and code, are entirely of my own work. The only exception permitted to
-this rule is if the Professor(s) give explicit, written permission, in the
-assignment handout, on the webpage/PIAZZA, or in E-mail, to use or adapt other
-source code into my work. In this case, the origins of all such code is clearly
-cited in my files.
+## HW1 - Introduction to System Programming
 
-2. I have not shared, transmitted, or received source code written for this
-class (including in any semester) from anyone else except the Professor(s) and
-the TAs. This includes both electronic forms (E-mail or downloading), as well as
-written or printed source code.
+HW1 is an introductory assignment that covers the basics of system programming. In this assignment, we explore topics such as file I/O, process management, and error handling. The goal is to gain a solid understanding of the fundamental concepts and techniques used in system programming.
 
-3. Except in the case of explicit written permission given by the Professor(s),
-I have not included in my repository any source code obtained from a textbook,
-downloaded from the Internet, extracted from a software package or source code
-library, or from any other similar source.
+## HW2 - Memory Management
 
-I understand that the appearance of extremely similar code fragments in more
-than one homework submission will be treated as evidence that code has been
-shared and an academic dishonesty case will be filed against me.
+HW2 focuses on memory management and dynamic memory allocation. We dive into concepts like pointers, arrays, and memory allocation functions. The assignment aims to enhance our understanding of memory management techniques and their importance in system programming.
 
-I understand that code fragments can be extremely similar even if they are
-formatted differently and use different identifiers/labels/variables. The
-appearance of extremely similar code fragments that differ in this way will be
-regarded as evidence of an attempt to conceal that sharing has taken place.
+## HW3 - Inter-Process Communication
 
-When in doubt about whether or not I am permitted to use particular source
-materials, I will obtain written permission from the Professor(s), in advance of
-my submission. Such permission is best requested and obtained by E-mail to
-cse320@cs.stonybrook.edu
-================================================================================
-Signed:
-Thu Jan 26 06:36:17 PM UTC 2023 - Allen Lin
+HW3 delves into inter-process communication mechanisms, such as pipes and shared memory. We learn how to establish communication channels between processes and explore synchronization techniques like semaphores and mutexes. The assignment helps us understand how different processes can interact and exchange data in a system.
+
+## HW4 - Multithreading and Concurrent Programming
+
+HW4 introduces the concept of multithreading and concurrent programming. We learn about thread creation, synchronization, and communication between threads. The assignment focuses on developing skills in writing concurrent programs and understanding the challenges and benefits of multithreading.
+
+## HW5 - Building a Complex System
+
+HW5 is a comprehensive assignment that combines the knowledge gained from previous assignments. It involves building a complex system using various system programming concepts. The assignment provides an opportunity to apply the skills learned throughout the course and showcases our ability to design and implement a functional system.
+
